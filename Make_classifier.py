@@ -22,7 +22,7 @@ with tf.Graph().as_default():
         print('Number of images: %d' % len(paths))
 
         print('Loading feature extraction model')
-        modeldir = './models/facenet/20190310-055158'
+        modeldir = './models/20180402-114759'
         facenet.load_model(modeldir)
 
         images_placeholder = tf.get_default_graph().get_tensor_by_name("input:0")

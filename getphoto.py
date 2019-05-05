@@ -11,7 +11,7 @@ while (True):
     if len(faceRects) == 1:
         c += 1
         if c % 10 ==0:
-            cv2.imwrite('input/xuguanyu/' + str(int(c/10)) + '.jpg', frame)
+            cv2.imwrite('input/new_user/' + str(int(c/10)) + '.jpg', frame)
 
 
     cv2.imshow('frame', frame)
