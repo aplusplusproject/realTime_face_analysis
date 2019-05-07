@@ -41,6 +41,10 @@ def get_args():
 # net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
 # net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
 
+def decode_fourcc(v):
+    v = int(v)
+    return "".join([chr((v >> 8 * i) & 0xFF) for i in range(4)])
+
 def _main():
 
     args = get_args()
@@ -77,8 +81,14 @@ def _main():
                 print('load classifier file-> %s' % classifier_filename_exp)
 
             video_capture = cv2.VideoCapture(0)
+            # video_capture = cv2.VideoCapture('rtsp://10.89.220.212:7754/h264_pcm.sdp')
             c = 0
 
+            video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            fourcc = video_capture.get(cv2.CAP_PROP_FOURCC)
+            codec = decode_fourcc(fourcc)
+            print("Codec: " + codec)
             print('Start Recognition!')
             prevTime = 0
             myYolo = YOLO(args)
