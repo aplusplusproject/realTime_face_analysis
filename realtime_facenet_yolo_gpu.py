@@ -14,6 +14,7 @@ import os
 import time
 import pickle
 from yolo.yolo import *
+from nn_models import get_X_train, features_model
 
 from utils import *
 
@@ -48,7 +49,7 @@ def decode_fourcc(v):
 def _main():
 
     args = get_args()
-    
+
 
     with tf.Graph().as_default():
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.6)
@@ -73,6 +74,25 @@ def _main():
             embeddings = tf.get_default_graph().get_tensor_by_name("embeddings:0")
             phase_train_placeholder = tf.get_default_graph().get_tensor_by_name("phase_train:0")
             embedding_size = embeddings.get_shape()[1]
+
+
+            ## Get age gender race models:
+            X_train = get_X_train()
+            # gender_model = features_model(X_train, "gender")
+            # age_model = features_model(X_train, "age")
+            # race_model = features_model(X_train, "race")
+            print("Loading age model")
+            age_filename = './myclassifier/age_nn_classifier.pkl'
+            age_filename_exp = os.path.expanduser(age_filename)
+            with open(age_filename_exp, 'rb') as f: age_model = pickle.load(f)
+            print("Loading gender model")
+            gender_filename = './myclassifier/gender_nn_classifier.pkl'
+            gender_filename_exp = os.path.expanduser(gender_filename)
+            with open(gender_filename_exp, 'rb') as f: gender_model = pickle.load(f)
+            print("Loading race model")
+            race_filename = './myclassifier/race_nn_classifier.pkl'
+            race_filename_exp = os.path.expanduser(race_filename)
+            with open(race_filename_exp, 'rb') as f: race_model = pickle.load(f)
 
             classifier_filename = './myclassifier/my_classifier.pkl'
             classifier_filename_exp = os.path.expanduser(classifier_filename)
@@ -106,9 +126,9 @@ def _main():
                     if frame.ndim == 2:
                         frame = facenet.to_rgb(frame)
                     frame = frame[:, :, 0:3]
-                    #print(frame.shape[0])
+                    #prin                            print(age_preds[0])t(frame.shape[0])
                     #print(frame.shape[1])
-                    
+
                     image = Image.fromarray(frame)
                     img, bounding_boxes = myYolo.detect_image(image)
 
@@ -141,7 +161,7 @@ def _main():
                                 continue
 
                             # cropped.append(frame[bb[i][1]:bb[i][3], bb[i][0]:bb[i][2], :])
-                            # cropped[0] = facenet.flip(cropped[0], False)
+                            # cropped[0] = facenet.flip(cropped[0], False)image_
                             # scaled.append(misc.imresize(cropped[0], (image_size, image_size), interp='bilinear'))
                             # scaled[0] = cv2.resize(scaled[0], (input_image_size,input_image_size),
                             #                        interpolation=cv2.INTER_CUBIC)
@@ -161,6 +181,10 @@ def _main():
 
                             emb_array[0, :] = sess.run(embeddings, feed_dict=feed_dict)
 
+                            age_preds = age_model.predict(emb_array)
+                            gender_preds = gender_model.predict(emb_array)
+                            race_preds = race_model.predict(emb_array)
+
                             predictions = model.predict_proba(emb_array)
                             best_class_indices = np.argmax(predictions, axis=1)
                             best_class_probabilities = predictions[np.arange(len(best_class_indices)), best_class_indices]
@@ -169,24 +193,38 @@ def _main():
                             text_x = bb[i][0]
                             text_y = bb[i][3] + 20
 
+                            age_str = "Age: " + str(age_preds.tolist()[0])
+                            gender_dict = {0: "Male", 1: "Female"}
+                            gender_str = "Gender: " + gender_dict[gender_preds.tolist()[0]]
+                            race_dict = {0: "White", 1: "Black", 2: "Asian", 3: "Indian", 4: "Others"}
+                            race_str = "Race: " + race_dict[race_preds.tolist()[0]]
                             # for H_i in HumanNames:
                             #     if HumanNames[best_class_indices[0]] == H_i:
                             result_names = class_names[best_class_indices[0]] if best_class_probabilities[0] > 0.45 else "Unknown"
                             #print(result_names)
                             cv2.putText(frame, result_names, (text_x, text_y), cv2.FONT_HERSHEY_COMPLEX_SMALL,
                                         1, (0, 0, 255), thickness=1, lineType=2)
+                            cv2.putText(frame, age_str, (text_x, text_y + 20), cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                                        1, (255, 0, 0), thickness=1, lineType=2)
+                            cv2.putText(frame, gender_str, (text_x, text_y + 40), cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                                        1, (255, 0, 0), thickness=1, lineType=2)
+                            cv2.putText(frame, race_str, (text_x, text_y + 60), cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                                        1, (255, 0, 0), thickness=1, lineType=2)
+
                     else:
                         print('Unable to align')
 
                 sec = curTime - prevTime
                 prevTime = curTime
                 fps = 1 / (sec)
-                str = 'FPS: %2.3f' % fps
+                strs = 'FPS: %2.3f' % fps
                 text_fps_x = len(frame[0]) - 150
                 text_fps_y = 20
-                cv2.putText(frame, str, (text_fps_x, text_fps_y),
+                cv2.putText(frame, strs, (text_fps_x, text_fps_y),
                             cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 0), thickness=1, lineType=2)
                 # c+=1
+                # cv2.putText(frame, "dkasjlk", (text_fps_x, text_fps_y),
+                #             cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 0), thickness=1, lineType=2)
                 cv2.imshow('Video', frame)
 
                 if cv2.waitKey(1) & 0xFF == ord('q'):
