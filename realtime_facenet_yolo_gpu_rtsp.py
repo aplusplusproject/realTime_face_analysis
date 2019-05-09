@@ -60,7 +60,7 @@ def _main():
             threshold = [0.6, 0.7, 0.7]  # three steps's threshold
             factor = 0.709  # scale factor
             margin = 44
-            frame_interval = 3
+            frame_interval = 5
             batch_size = 1000
             image_size = 182
             input_image_size = 160
@@ -80,27 +80,36 @@ def _main():
                 (model, class_names) = pickle.load(infile)
                 print('load classifier file-> %s' % classifier_filename_exp)
 
-            video_capture = cv2.VideoCapture(0)
+            # video_capture = cv2.VideoCapture(0)
+            video_capture = cv2.VideoCapture('http://10.89.146.64:8080/video')
             c = 0
+            fps = 2 # default fps of the face recognition
+            bb, result_names, text_x, text_y = None, None, None, None
 
-            video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-            video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
+            video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
+            # video_capture.set(cv2.CAP_PROP_FPS, 5)
             fourcc = video_capture.get(cv2.CAP_PROP_FOURCC)
             codec = decode_fourcc(fourcc)
             print("Codec: " + codec)
+            camera_fps = int(video_capture.get(cv2.CAP_PROP_FPS))
+            print('Current Camera FPS:', camera_fps)
+            frame_interval = int (camera_fps / frame_interval)
             print('Start Recognition!')
             prevTime = 0
             myYolo = YOLO(args)
             while True:
                 ret, frame = video_capture.read()
-
+                
                 # frame = cv2.resize(frame, (0,0), fx=0.5, fy=0.5)    #resize frame (optional)
 
                 curTime = time.time()    # calc fps
+
                 timeF = frame_interval
+                print('timeF[frame_interval]:', frame_interval)
 
                 if (c % timeF == 0):
-                    find_results = []
+                    # find_results = []
 
                     if frame.ndim == 2:
                         frame = facenet.to_rgb(frame)
@@ -176,6 +185,10 @@ def _main():
                                         1, (0, 0, 255), thickness=1, lineType=2)
                     else:
                         print('Unable to align')
+                if (bb is not None and result_names is not None and text_x is not None and text_y is not None):
+                    cv2.rectangle(frame, (bb[i][0], bb[i][1]), (bb[i][2], bb[i][3]), (0, 255, 0), 2)
+                    cv2.putText(frame, result_names, (text_x, text_y), cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                                            1, (0, 0, 255), thickness=1, lineType=2)
 
                 sec = curTime - prevTime
                 prevTime = curTime
@@ -185,9 +198,10 @@ def _main():
                 text_fps_y = 20
                 cv2.putText(frame, str, (text_fps_x, text_fps_y),
                             cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 0), thickness=1, lineType=2)
-                # c+=1
+                c+=1
                 cv2.imshow('Video', frame)
 
+                # manual_delay = (camera_fps - fps)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
 
