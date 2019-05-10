@@ -180,15 +180,10 @@ def _main():
 
             video_capture = cv2.VideoCapture('http://10.89.172.169:8080/video')
             # Define the codec and create VideoWriter object
-            if args.save:
-                video_fps = float(5)
-                frame_width = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
-                frame_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                video_file_name = './output/output_' + time.strftime("%Y%m%d_%H%M%S") + '.mp4'
-                cv2_video_writer = cv2.VideoWriter(video_file_name, cv2.VideoWriter_fourcc(*'MP4V'), video_fps, (frame_width,frame_height))
+
 
             c = 0
-            fps = 2 # default fps of the face recognition
+            fps = 2 # default fps xof the face recognition
             bb, result_names, text_x, text_y = None, None, None, None
 
             video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 480)
@@ -200,6 +195,14 @@ def _main():
             print('Current Camera FPS:', camera_fps)
             frame_interval = int (camera_fps / frame_interval)
             print('Start Recognition!')
+
+            if args.save:
+                video_fps = float(3.0)
+                frame_width = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+                frame_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                video_file_name = './output/output_' + time.strftime("%Y%m%d_%H%M%S") + '.mp4'
+                cv2_video_writer = cv2.VideoWriter(video_file_name, cv2.VideoWriter_fourcc(*'MP4V'), video_fps, (frame_width,frame_height))
+
             prevTime = 0
             myYolo = YOLO(args)
             # load model and weights
@@ -337,13 +340,13 @@ def _main():
                             bb_list.append(bb[i])
                     else:
                         print('Unable to align')
-                 
+
                 elif (bb_list and result_names_list is not None and text_x_list is not None and text_y_list is not None):
                     for i in range(0, len(result_names_list)):
                         cv2.rectangle(frame, (bb_list[i][0], bb_list[i][1]), (bb_list[i][2], bb_list[i][3]), (0, 255, 0), 2)
                         cv2.putText(frame, result_names_list[i], (text_x_list[i], text_y_list[i]), cv2.FONT_HERSHEY_COMPLEX_SMALL,
                                                 1, (0, 0, 255), thickness=1, lineType=2)
-                
+
                 sec = curTime - prevTime
                 prevTime = curTime
                 fps = 1 / (sec)
@@ -352,9 +355,9 @@ def _main():
                 text_fps_y = 20
                 cv2.putText(frame, strs, (text_fps_x, text_fps_y),
                             cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 0), thickness=1, lineType=2)
-               
+
                 cv2_video_writer.write(frame)
-                c+=1
+                # c+=1
                 cv2.imshow('Video', frame)
 
                 if cv2.waitKey(1) & 0xFF == ord('q'):
