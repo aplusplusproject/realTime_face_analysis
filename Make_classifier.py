@@ -9,7 +9,8 @@ import os
 import math
 import pickle
 from sklearn.svm import SVC
-
+from sklearn.neural_network import MLPClassifier
+from sklearn.neighbors import KNeighborsClassifier
 
 with tf.Graph().as_default():
 
@@ -31,7 +32,7 @@ with tf.Graph().as_default():
         embedding_size = embeddings.get_shape()[1]
 
         # Run forward pass to calculate embeddings
-        print('Calculating features for images')
+        print('Cahttp://global.espn.com/nfl/lculating features for images')
         batch_size = 1000
         image_size = 160
         nrof_images = len(paths)
@@ -50,7 +51,9 @@ with tf.Graph().as_default():
 
         # Train classifier
         print('Training classifier')
+        # model = MLPClassifier(learning_rate_init=0.0001, max_iter=1600, hidden_layer_sizes = (128, 64))
         model = SVC(kernel='linear', probability=True)
+        # model = KNeighborsClassifier(n_neighbors = 3)
         model.fit(emb_array, labels)
 
         # Create a list of class names

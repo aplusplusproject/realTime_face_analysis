@@ -8,6 +8,5 @@
 /align/yolo_weights/*.h5
 /align/aligned_faces/
 /align/unaligned_faces/
-
+/pretrained_models
 /logs/
-
