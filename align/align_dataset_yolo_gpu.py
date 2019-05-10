@@ -104,9 +104,9 @@ def main(args_list):
                                     for i in range(nrof_faces):
                                         det_arr.append(np.squeeze(det[i]))
                                 else:
-                                    det = np.asarray(det)
-                                    print(det)
-                                    bounding_box_size = (det[:,2]-det[:,0])*(det[:,3]-det[:,1])
+                                    det = np.array(det)
+                                    bounding_box_size = np.hstack((det[:,2]-det[:,0])*(det[:,3]-det[:,1]))
+                                    
                                     img_center = img_size / 2
                                     offsets = np.vstack([ (det[:,0]+det[:,2])/2-img_center[1], (det[:,1]+det[:,3])/2-img_center[0] ])
                                     offset_dist_squared = np.sum(np.power(offsets,2.0),0)
@@ -163,7 +163,7 @@ def get_arguments():
     args2 = parser2.parse_args()
     args = [args1, args2]
 
-    return args;
+    return args
 
 if __name__ == '__main__':
     main(get_arguments())
