@@ -16,7 +16,7 @@ def main():
     parser = argparse.ArgumentParser()
     #input directory and name
     parser.add_argument("--dir", type=str, default="./output/")
-    parser.add_argument("--name", type=str, default="Sedrick_Keh")
+    parser.add_argument("--name", type=str, default="Mark_Christopher_Uy")
     args = parser.parse_args()
 
     rename(args.dir, args.name)

@@ -27,6 +27,10 @@ modhash = 'fbe63257a054c1c5466cfd7bf14646d6'
 
 from utils import *
 
+def decode_fourcc(v):
+    v = int(v)
+    return "".join([chr((v >> 8 * i) & 0xFF) for i in range(4)])
+
 def crop_face(imgarray, section, margin=40, size=64):
     """
     :param imgarray: full image
@@ -85,6 +89,9 @@ def get_args():
                         help="margin around detected face for age-gender estimation")
     parser.add_argument("--image_dir", type=str, default=None,
                         help="target image directory; if set, images in image_dir are used instead of webcam")
+    parser.add_argument('--faceClassifier', type=str,
+                    default='svm', help='classifier to predict the identity')
+    parser.add_argument('--save', action='store_true', default=True, help='save the video recording')
     args = parser.parse_args()
     return args;
 
@@ -130,13 +137,23 @@ def _main():
             embeddings = tf.get_default_graph().get_tensor_by_name("embeddings:0")
             phase_train_placeholder = tf.get_default_graph().get_tensor_by_name("phase_train:0")
             embedding_size = embeddings.get_shape()[1]
+            print('embedding_size:', embedding_size)
 
 
-            classifier_filename = './myclassifier/my_classifier.pkl'
-            classifier_filename_exp = os.path.expanduser(classifier_filename)
+            svmForFaces_classifier_filename = './myclassifier/my_classifier.pkl'
+            knnForFaces_classifier_filename = './myclassifier/my_classifier_knnForFaces.pkl'
+            if args.faceClassifier == 'knn':
+                print('Using KNN Classifier for face idenitification...')
+                classifier_filename_exp = os.path.expanduser(knnForFaces_classifier_filename)
+            else:
+                # Default: args.faceClassifier == 'svm'
+                print('Using SVM Classifier for face idenitification...')
+                classifier_filename_exp = os.path.expanduser(svmForFaces_classifier_filename)
             with open(classifier_filename_exp, 'rb') as infile:
                 (model_identity, class_names) = pickle.load(infile)
                 print('load classifier file-> %s' % classifier_filename_exp)
+
+            print('Face classes: ', class_names)
 
             # print("Loading age model")
             # age_filename = './myclassifier/age_nn_classifier.pkl'
@@ -163,8 +180,22 @@ def _main():
             model_age.load_weights(weight_file)
 
             video_capture = cv2.VideoCapture(0)
+            # Define the codec and create VideoWriter object
+            if args.save:
+                video_fps = float(5)
+                frame_width = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+                frame_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                video_file_name = './output/output_' + time.strftime("%Y%m%d_%H%M%S") + '.mp4'
+                cv2_video_writer = cv2.VideoWriter(video_file_name, cv2.VideoWriter_fourcc(*'MP4V'), video_fps, (frame_width,frame_height))
+
             c = 0
 
+            fourcc = video_capture.get(cv2.CAP_PROP_FOURCC)
+            codec = decode_fourcc(fourcc)
+            print("Codec: " + codec)
+            camera_fps = int(video_capture.get(cv2.CAP_PROP_FPS))
+            print('Current Camera FPS:', camera_fps)
+            frame_interval = int (camera_fps / frame_interval)
             print('Start Recognition!')
             prevTime = 0
             myYolo = YOLO(args)
@@ -257,7 +288,7 @@ def _main():
 
                             # for H_i in HumanNames:
                             #     if HumanNames[best_class_indices[0]] == H_i:
-                            result_names = class_names[best_class_indices[0]] if best_class_probabilities[0] > 0.45 else "Unknown"
+
                             #print(result_names)
                                 # predict ages and genders of the detected faces
                             predicted_genders = results[0]
@@ -280,14 +311,15 @@ def _main():
                                 #     if HumanNames[best_class_indices[0]] == H_i:
                             result_names = class_names[best_class_indices[0]] if best_class_probabilities[0] > 0.45 else "Unknown"
                                 #print(result_names)
-                            cv2.putText(frame, result_names, (text_x, text_y), cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                            identity_probabilities = int(best_class_probabilities[0]*100)
+                            cv2.putText(frame,  result_names + '(' + str(identity_probabilities) + '%)', (text_x, text_y), cv2.FONT_HERSHEY_COMPLEX_SMALL,
                                             1, (0, 0, 255), thickness=1, lineType=2)
                             cv2.putText(frame, age_str, (text_x, text_y + 15), cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                                            1, (255, 0, 0), thickness=1, lineType=2)
+                                            1, (253, 148, 31), thickness=1, lineType=2)
                             cv2.putText(frame, gender_str, (text_x, text_y + 30), cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                                            1, (255, 0, 0), thickness=1, lineType=2)
+                                            1, (253, 148, 31), thickness=1, lineType=2)
                             cv2.putText(frame, race_str, (text_x, text_y + 45), cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                                        1, (255, 0, 0), thickness=1, lineType=2)
+                                        1, (253, 148, 31), thickness=1, lineType=2)
                             # cv2.putText(frame, race_str, (text_x, text_y + 60), cv2.FONT_HERSHEY_COMPLEX_SMALL,
                             #                 1, (255, 0, 0), thickness=1, lineType=2)
                     else:
@@ -296,11 +328,13 @@ def _main():
                 sec = curTime - prevTime
                 prevTime = curTime
                 fps = 1 / (sec)
-                str = 'FPS: %2.3f' % fps
+                strs = 'FPS: %2.3f' % fps
                 text_fps_x = len(frame[0]) - 150
                 text_fps_y = 20
-                cv2.putText(frame, str, (text_fps_x, text_fps_y),
+                cv2.putText(frame, strs, (text_fps_x, text_fps_y),
                             cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 0), thickness=1, lineType=2)
+               
+                cv2_video_writer.write(frame)
                 # c+=1
                 cv2.imshow('Video', frame)
 
@@ -309,7 +343,7 @@ def _main():
 
             video_capture.release()
             # #video writer
-            # out.release()
+            cv2_video_writer.release()
             cv2.destroyAllWindows()
 
 if __name__ == "__main__":

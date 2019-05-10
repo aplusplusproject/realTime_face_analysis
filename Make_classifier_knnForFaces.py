@@ -50,7 +50,7 @@ with tf.Graph().as_default():
 
         # Train classifier
         print('Training classifier')
-        model = KNeighborsClassifier(4, weights='uniform')
+        model = KNeighborsClassifier(3, weights='uniform')
         model.fit(emb_array, labels)
 
         print('emb_array.shape: ', emb_array.shape)

@@ -115,3 +115,8 @@ A special thanks to the following:
 * cryer https://github.com/cryer/face_recognition
 
   Provided a framework for moving images from webcam to model, model to real-time on-screen bounding boxes and names
+
+
+* https://github.com/Tony607/Keras_age_gender?fbclid=IwAR3g_k362ygrSRIKMttW0vzFP_G00juSUmUQywuu5BHsZ9p41u5JuDkpAbI
+
+  Provided a framework for easy real time gender age prediction from webcam video with Keras
