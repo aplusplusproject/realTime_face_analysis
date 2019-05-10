@@ -3,11 +3,12 @@
 /models/facenet/
 /models/20170512-110547/
 /models/20180402-114759/
+/models/pretrained_wideresnet/
 
 /align/yolo_weights/*.weights
 /align/yolo_weights/*.h5
 /align/aligned_faces/
 /align/unaligned_faces/
-
+/pretrained_models
 /logs/
-
+embeds.csv
