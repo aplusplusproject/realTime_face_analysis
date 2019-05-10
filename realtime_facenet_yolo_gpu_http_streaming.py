@@ -31,8 +31,10 @@ def get_args():
                     help='the iou threshold')
     parser.add_argument('--img-size', type=list, action='store',
                     default=(416, 416), help='input image size')
+    parser.add_argument('--faceClassifier', type=str,
+                    default='svm', help='classifier to predict the identity')
     args = parser.parse_args()
-    return args;
+    return args
 
 # print('Creating networks and loading parameters')
 
@@ -74,20 +76,27 @@ def _main():
             phase_train_placeholder = tf.get_default_graph().get_tensor_by_name("phase_train:0")
             embedding_size = embeddings.get_shape()[1]
 
-            classifier_filename = './myclassifier/my_classifier.pkl'
-            classifier_filename_exp = os.path.expanduser(classifier_filename)
+            svmForFaces_classifier_filename = './myclassifier/my_classifier.pkl'
+            knnForFaces_classifier_filename = './myclassifier/my_classifier_knnForFaces.pkl'
+            if args.faceClassifier == 'knn':
+                print('Using KNN Classifier for face idenitification...')
+                classifier_filename_exp = os.path.expanduser(knnForFaces_classifier_filename)
+            else:
+                # Default: args.faceClassifier == 'svm'
+                print('Using SVM Classifier for face idenitification...')
+                classifier_filename_exp = os.path.expanduser(svmForFaces_classifier_filename)
             with open(classifier_filename_exp, 'rb') as infile:
                 (model, class_names) = pickle.load(infile)
                 print('load classifier file-> %s' % classifier_filename_exp)
 
             # video_capture = cv2.VideoCapture(0)
-            video_capture = cv2.VideoCapture('http://10.89.146.64:8080/video')
+            video_capture = cv2.VideoCapture('http://10.89.172.169:8080/video')
             c = 0
             fps = 2 # default fps of the face recognition
             bb, result_names, text_x, text_y = None, None, None, None
 
-            video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
-            video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
+            video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 480)
+            video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
             # video_capture.set(cv2.CAP_PROP_FPS, 5)
             fourcc = video_capture.get(cv2.CAP_PROP_FOURCC)
             codec = decode_fourcc(fourcc)
@@ -109,7 +118,13 @@ def _main():
                 print('timeF[frame_interval]:', frame_interval)
 
                 if (c % timeF == 0):
-                    # find_results = []
+                    result_names_list = []
+                    text_x_list = []
+                    text_y_list = []
+                    bb_list = []
+
+                    # Reset the bounding box
+                    bb, result_names, text_x, text_y = None, None, None, None
 
                     if frame.ndim == 2:
                         frame = facenet.to_rgb(frame)
@@ -183,20 +198,27 @@ def _main():
                             #print(result_names)
                             cv2.putText(frame, result_names, (text_x, text_y), cv2.FONT_HERSHEY_COMPLEX_SMALL,
                                         1, (0, 0, 255), thickness=1, lineType=2)
+
+                            result_names_list.append(result_names)
+                            text_x_list.append(text_x)
+                            text_y_list.append(text_y)
+                            bb_list.append(bb[i])
+                            
                     else:
                         print('Unable to align')
-                if (bb is not None and result_names is not None and text_x is not None and text_y is not None):
-                    cv2.rectangle(frame, (bb[i][0], bb[i][1]), (bb[i][2], bb[i][3]), (0, 255, 0), 2)
-                    cv2.putText(frame, result_names, (text_x, text_y), cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                                            1, (0, 0, 255), thickness=1, lineType=2)
+                elif (bb_list and result_names_list is not None and text_x_list is not None and text_y_list is not None):
+                    for i in range(0, len(result_names_list)):
+                        cv2.rectangle(frame, (bb_list[i][0], bb_list[i][1]), (bb_list[i][2], bb_list[i][3]), (0, 255, 0), 2)
+                        cv2.putText(frame, result_names_list[i], (text_x_list[i], text_y_list[i]), cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                                                1, (0, 0, 255), thickness=1, lineType=2)
 
                 sec = curTime - prevTime
                 prevTime = curTime
                 fps = 1 / (sec)
-                str = 'FPS: %2.3f' % fps
+                strs = 'FPS: %2.3f' % fps
                 text_fps_x = len(frame[0]) - 150
                 text_fps_y = 20
-                cv2.putText(frame, str, (text_fps_x, text_fps_y),
+                cv2.putText(frame, strs, (text_fps_x, text_fps_y),
                             cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 0), thickness=1, lineType=2)
                 c+=1
                 cv2.imshow('Video', frame)

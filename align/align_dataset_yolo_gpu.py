@@ -161,7 +161,7 @@ def get_arguments():
     args2 = parser2.parse_args()
     args = [args1, args2]
 
-    return args;
+    return args
 
 if __name__ == '__main__':
     main(get_arguments())
